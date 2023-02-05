@@ -1,34 +1,31 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-#pragma warning disable CS0169
-
 // ReSharper disable PrivateFieldCanBeConvertedToLocalVariable
-// ReSharper disable InconsistentNaming
 
 namespace IoRingSharp.Win32;
 
 public static partial class KernelBase
 {
     [Flags]
-    public enum IORING_CREATE_ADVISORY_FLAGS
+    public enum IoRingCreateAdvisoryFlags
     {
-        IORING_CREATE_ADVISORY_FLAGS_NONE = 0
+        IoRingCreateAdvisoryFlagsNone = 0
     }
 
     // Flags to configure the kernel behavior of an IoRing. The implementation will
     // fail the create call if it does not understand any of the required flags and
     // ignores any advisory flags that it does not understand.
     [Flags]
-    public enum IORING_CREATE_REQUIRED_FLAGS
+    public enum IoRingCreateRequiredFlags
     {
-        IORING_CREATE_REQUIRED_FLAGS_NONE = 0
+        IoRingCreateRequiredFlagsNone = 0
     }
 
-    public enum IORING_VERSION
+    public enum IoRingVersion
     {
-        IORING_VERSION_INVALID = 0,
-        IORING_VERSION_1,
+        IoRingVersionInvalid = 0,
+        IoRingVersion1,
 
         /// <summary>Minor update</summary>
         /// <remarks>
@@ -37,19 +34,28 @@ public static partial class KernelBase
         ///     of a race condition. In earlier version please do a timed wait to work
         ///     around this issue.
         /// </remarks>
-        IORING_VERSION_2
+        IoRingVersion2
     }
 
     private const string KernelBaseDll = "KernelBase.dll";
 
+    /// <summary>
+    ///     Create an IoRing.
+    /// </summary>
+    /// <param name="ioRingVersion">The version of the IoRing to create.</param>
+    /// <param name="flags">Flags to configure the kernel behavior of an IoRing.</param>
+    /// <param name="submissionQueueSize">Size of the submission queue.</param>
+    /// <param name="completionQueueSize">Size of the completion queue.</param>
+    /// <param name="handle">Handle to the IoRing.</param>
+    /// <returns></returns>
     [LibraryImport(KernelBaseDll, SetLastError = true)]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvStdcall) })]
     internal static partial int CreateIoRing(
-        IORING_VERSION ioRingVersion,
-        IORING_CREATE_FLAGS flags,
+        IoRingVersion ioRingVersion,
+        IoRingCreateFlags flags,
         uint submissionQueueSize,
         uint completionQueueSize,
-        ref nint h
+        ref nint handle
     );
 
     [LibraryImport(KernelBaseDll, SetLastError = true)]
@@ -58,7 +64,7 @@ public static partial class KernelBase
 
     [LibraryImport(KernelBaseDll, SetLastError = true)]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvStdcall) })]
-    internal static partial int GetIoRingInfo(nint h, ref IORING_INFO info);
+    internal static partial int GetIoRingInfo(nint h, ref IoRingInfo info);
 
     [LibraryImport(KernelBaseDll, SetLastError = true)]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvStdcall) })]
@@ -70,7 +76,7 @@ public static partial class KernelBase
 
     [LibraryImport(KernelBaseDll, SetLastError = true)]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvStdcall) })]
-    internal static partial int PopIoRingCompletion(nint h, ref IORING_CQE completion);
+    internal static partial int PopIoRingCompletion(nint h, ref IoRingCqe completion);
 
     [LibraryImport(KernelBaseDll, SetLastError = true)]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvStdcall) })]
@@ -80,7 +86,7 @@ public static partial class KernelBase
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvStdcall) })]
     internal static unsafe partial int BuildIoRingCancelRequest(
         nint ioRing,
-        IORING_HANDLE_REF file,
+        IoRingHandleRef file,
         uint* opToCancel,
         uint* userData);
 
@@ -99,12 +105,12 @@ public static partial class KernelBase
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvStdcall) })]
     internal static unsafe partial int BuildIoRingReadFile(
         nint ioRing,
-        IORING_HANDLE_REF fileRef,
-        IORING_BUFFER_REF dataRef,
+        IoRingHandleRef fileRef,
+        IoRingBufferRef dataRef,
         uint numberOfBytesToRead,
         ulong fileOffset,
         nuint userData,
-        IORING_SQE_FLAGS flags);
+        IoRingSqeFlags flags);
 
     /// <summary>
     ///     Builds a submission queue entry for IORING_OP_REGISTER_FILES
@@ -136,111 +142,117 @@ public static partial class KernelBase
     internal static unsafe partial int BuildIoRingRegisterBuffers(
         nint ioRing,
         uint count,
-        IORING_BUFFER_INFO[] buffers,
+        IoRingBufferInfo[] buffers,
         nuint userData
     );
 
     [LibraryImport(KernelBaseDll, SetLastError = true)]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvStdcall) })]
-    internal static partial int QueryIoRingCapabilities(ref IORING_CAPABILITIES capabilities);
+    internal static partial int QueryIoRingCapabilities(ref IoRingCapabilities capabilities);
 
     [LibraryImport(KernelBaseDll, SetLastError = true)]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvStdcall) })]
-    internal static partial int IsIoRingOpSupported(nint ioRing, IORING_OP_CODE op);
+    internal static partial int IsIoRingOpSupported(nint ioRing, IoRingOpCode op);
 
     [StructLayout(LayoutKind.Explicit)]
-    internal struct IORING_HANDLE_REF
+    internal struct IoRingHandleRef
     {
-        public IORING_HANDLE_REF(nint h)
+        public IoRingHandleRef(nint h)
         {
-            Kind = IORING_REF_KIND.IORING_REF_RAW;
+            Kind = IoRingRefKind.IoRingRefRaw;
             Handle = h;
         }
 
-        public IORING_HANDLE_REF(uint index)
+        public IoRingHandleRef(uint index)
         {
-            Kind = IORING_REF_KIND.IORING_REF_REGISTERED;
+            Kind = IoRingRefKind.IoRingRefRegistered;
             Index = index;
         }
 
-        [FieldOffset(0)] private readonly IORING_REF_KIND Kind;
+        [FieldOffset(0)] private readonly IoRingRefKind Kind;
         [FieldOffset(8)] private readonly nint Handle;
         [FieldOffset(8)] private readonly uint Index;
     }
 
-    internal struct IORING_REGISTERED_BUFFER
+    internal struct IoRingRegisteredBuffer
     {
-        public IORING_REGISTERED_BUFFER(uint index, uint offset)
+        public IoRingRegisteredBuffer(uint index, uint offset)
         {
-            BufferIndex = index;
-            Offset = offset;
+            _bufferIndex = index;
+            _offset = offset;
         }
 
         // Index of pre-registered buffer
-        public uint BufferIndex;
+        private uint _bufferIndex;
 
         // Offset into the pre-registered buffer
-        public uint Offset;
+        private uint _offset;
     }
 
-    internal struct IORING_BUFFER_INFO
+    internal unsafe struct IoRingBufferInfo
     {
-        private nint Address;
-        private uint Length;
+        private void* _address;
+        private uint _length;
+
+        public IoRingBufferInfo(Memory<byte> buffer)
+        {
+            _address = buffer.Pin().Pointer;
+            _length = (uint)buffer.Length;
+        }
     }
 
     [StructLayout(LayoutKind.Explicit)]
-    internal struct IORING_BUFFER_REF
+    internal struct IoRingBufferRef
     {
-        public IORING_BUFFER_REF(nint address)
+        public IoRingBufferRef(nint address)
         {
-            Kind = IORING_REF_KIND.IORING_REF_RAW;
+            Kind = IoRingRefKind.IoRingRefRaw;
             Address = address;
         }
 
-        public IORING_BUFFER_REF(IORING_REGISTERED_BUFFER registeredBuffer)
+        public IoRingBufferRef(IoRingRegisteredBuffer registeredBuffer)
         {
-            Kind = IORING_REF_KIND.IORING_REF_REGISTERED;
+            Kind = IoRingRefKind.IoRingRefRegistered;
             IndexAndOffset = registeredBuffer;
         }
 
-        public IORING_BUFFER_REF(uint index, uint offset)
-            : this(new IORING_REGISTERED_BUFFER(index, offset))
+        public IoRingBufferRef(uint index, uint offset)
+            : this(new IoRingRegisteredBuffer(index, offset))
         {
         }
 
-        [FieldOffset(0)] public IORING_REF_KIND Kind;
-        [FieldOffset(8)] public nint Address;
-        [FieldOffset(8)] public IORING_REGISTERED_BUFFER IndexAndOffset;
+        [FieldOffset(0)] private readonly IoRingRefKind Kind;
+        [FieldOffset(8)] private readonly nint Address;
+        [FieldOffset(8)] private readonly IoRingRegisteredBuffer IndexAndOffset;
     }
 
     [Flags]
-    internal enum IORING_SQE_FLAGS
+    internal enum IoRingSqeFlags
     {
-        IOSQE_FLAGS_NONE = 0
+        IoSqeFlagsNone = 0
     }
 
-    internal unsafe struct IORING_CQE
+    public unsafe struct IoRingCqe
     {
-        private uint* UserData;
-        private int ResultCode;
-        private ulong* Information;
+        public uint* _userData;
+        public int _resultCode;
+        public ulong* _information;
     }
 
-    public struct IORING_CREATE_FLAGS
+    public struct IoRingCreateFlags
     {
-        public IORING_CREATE_REQUIRED_FLAGS Required = IORING_CREATE_REQUIRED_FLAGS.IORING_CREATE_REQUIRED_FLAGS_NONE;
-        public IORING_CREATE_ADVISORY_FLAGS Advisory = IORING_CREATE_ADVISORY_FLAGS.IORING_CREATE_ADVISORY_FLAGS_NONE;
+        public IoRingCreateRequiredFlags Required = IoRingCreateRequiredFlags.IoRingCreateRequiredFlagsNone;
+        public IoRingCreateAdvisoryFlags Advisory = IoRingCreateAdvisoryFlags.IoRingCreateAdvisoryFlagsNone;
 
-        public IORING_CREATE_FLAGS()
+        public IoRingCreateFlags()
         {
         }
     }
 
-    public struct IORING_INFO
+    public struct IoRingInfo
     {
-        public IORING_VERSION IoRingVersion;
-        public IORING_CREATE_FLAGS Flags;
+        public IoRingVersion IoRingVersion;
+        public IoRingCreateFlags Flags;
         public uint SubmissionQueueSize;
         public uint CompletionQueueSize;
     }
@@ -249,10 +261,10 @@ public static partial class KernelBase
     ///     Flags indicating functionality supported by a given implementation
     /// </summary>
     [Flags]
-    internal enum IORING_FEATURE_FLAGS
+    public enum IoRingFeatureFlags
     {
         /// <summary>No specific functionality for the implementation</summary>
-        IORING_FEATURE_FLAGS_NONE = 0,
+        IoRingFeatureFlagsNone = 0,
 
         /// <summary>
         ///     IoRing support is emulated in User Mode (not directly supported by KM)
@@ -264,21 +276,22 @@ public static partial class KernelBase
         ///     application compatibility at the expense of performance. Thus, it allows
         ///     apps to make a choice at run-time.
         /// </remarks>
-        IORING_FEATURE_UM_EMULATION = 0x00000001,
+        IoRingFeatureUmEmulation = 0x00000001,
 
         /// <summary>
         ///     If this flag is present the SetIoRingCompletionEvent API is available
         ///     and supported
         /// </summary>
-        IORING_FEATURE_SET_COMPLETION_EVENT = 0x00000002
+        IoRingFeatureSetCompletionEvent = 0x00000002
     }
 
-    internal struct IORING_CAPABILITIES
+    [StructLayout(LayoutKind.Sequential)]
+    public struct IoRingCapabilities
     {
-        private IORING_VERSION MaxVersion;
-        private uint MaxSubmissionQueueSize;
-        private uint MaxCompletionQueueSize;
-        private IORING_FEATURE_FLAGS FeatureFlags;
+        public IoRingVersion _maxVersion;
+        public uint _maxSubmissionQueueSize;
+        public uint _maxCompletionQueueSize;
+        public IoRingFeatureFlags _featureFlags;
     }
 
     /// <summary>
@@ -286,10 +299,10 @@ public static partial class KernelBase
     ///     support preregistration in an IORING
     /// </summary>
     [Flags]
-    internal enum IORING_REF_KIND
+    internal enum IoRingRefKind
     {
-        IORING_REF_RAW,
-        IORING_REF_REGISTERED
+        IoRingRefRaw,
+        IoRingRefRegistered
     }
 
     /// <summary>Values for a submission queue entry opcode</summary>
@@ -299,16 +312,16 @@ public static partial class KernelBase
     ///     are added.  Some codes may be deprecated and replaced with a new code but
     ///     the actual op code value is never re-used.
     /// </remarks>
-    internal enum IORING_OP_CODE
+    public enum IoRingOpCode
     {
         /// <summary>Do not perform any I/O</summary>
         /// <remarks>
         ///     Useful for testing overhead performance and draining the queue
         /// </remarks>
-        IORING_OP_NOP,
+        IoRingOpNop,
 
         /// <summary>Read from a file to a buffer</summary>
-        IORING_OP_READ,
+        IoRingOpRead,
 
         /// <summary>Registers an array of file HANDLEs with the IoRing</summary>
         /// <remarks>
@@ -323,7 +336,7 @@ public static partial class KernelBase
         ///     this implicitly has "link" semantics in that any subsequent entry will
         ///     not start until after this is completed)
         /// </remarks>
-        IORING_OP_REGISTER_FILES,
+        IoRingOpRegisterFiles,
 
         /// <summary>
         ///     Registers an array of IORING_BUFFER_INFO with the IoRing
@@ -340,13 +353,13 @@ public static partial class KernelBase
         ///     implicitly has "link" semantics in that any subsequent entry will not
         ///     start until after this completes.
         /// </remarks>
-        IORING_OP_REGISTER_BUFFERS,
+        IoRingOpRegisterBuffers,
 
         /// <summary>Requests cancellation of a previously submitted operation</summary>
         /// <remarks>
         ///     This attempts to cancel a previously submitted operation. The UserData for the
         ///     operation to cancel is used to identify the operation.
         /// </remarks>
-        IORING_OP_CANCEL
+        IoRingOpCancel
     }
 }
