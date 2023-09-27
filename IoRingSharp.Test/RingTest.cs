@@ -1,4 +1,5 @@
 using System.Text;
+using IoRingSharp.Win32;
 
 namespace IoRingSharp.Test;
 
@@ -7,9 +8,23 @@ public class Tests
     [Test]
     public void Test1()
     {
+        var capabilities = Ring.GetIoRingCapabilities();
+
+        if (capabilities.MaxVersion is KernelBase.IoRingVersion.IoRingVersionInvalid)
+        {
+            Assert.Pass("IoRing is not supported");
+        }
+        
         using var ring = new Ring(4, 4);
 
         Assert.That(ring, Is.Not.Null);
+
+        var opcodes = ring.GetSupportedOpCodes();
+        
+        if (!opcodes.Contains(KernelBase.IoRingOpCode.IoRingOpRead))
+        {
+            Assert.Pass("ReadFixed is not supported");
+        }
 
         var file = File.Create("test.txt");
         const string str = "Hello World!";
