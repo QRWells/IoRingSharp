@@ -12,8 +12,15 @@ public sealed class Ring : IDisposable
     public Ring(uint sqEntries, uint cqEntries)
     {
         var handle = nint.Zero;
+        var capabilities = GetIoRingCapabilities();
+        var version = capabilities.MaxVersion switch
+        {
+            IoRingVersion.IoRingVersionInvalid => throw new NotSupportedException("IoRing is not supported"),
+            _ => capabilities.MaxVersion
+        };
+
         if (CreateIoRing(
-                IoRingVersion.IoRingVersion2,
+                version,
                 new IoRingCreateFlags(),
                 sqEntries,
                 cqEntries, ref handle) != 0)
@@ -25,8 +32,6 @@ public sealed class Ring : IDisposable
     public void Dispose()
     {
         _handle.Dispose();
-
-        GC.SuppressFinalize(this);
     }
 
     public IoRingInfo GetIoRingInfo()

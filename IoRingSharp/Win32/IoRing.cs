@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 
 // ReSharper disable PrivateFieldCanBeConvertedToLocalVariable
 
@@ -34,7 +35,8 @@ public static partial class KernelBase
         ///     of a race condition. In earlier version please do a timed wait to work
         ///     around this issue.
         /// </remarks>
-        IoRingVersion2
+        IoRingVersion2,
+        IoRingVersion3
     }
 
     private const string KernelBaseDll = "KernelBase.dll";
@@ -229,7 +231,8 @@ public static partial class KernelBase
     [Flags]
     internal enum IoRingSqeFlags
     {
-        IoSqeFlagsNone = 0
+        IoSqeFlagsNone = 0,
+        IoSqeFlagsDrainPrecedingOps
     }
 
     public unsafe struct IoRingCqe
@@ -247,6 +250,11 @@ public static partial class KernelBase
         public IoRingCreateFlags()
         {
         }
+
+        public override string ToString()
+        {
+            return $"Required: {Required}, Advisory: {Advisory}";
+        }
     }
 
     public struct IoRingInfo
@@ -255,6 +263,16 @@ public static partial class KernelBase
         public IoRingCreateFlags Flags;
         public uint SubmissionQueueSize;
         public uint CompletionQueueSize;
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"IoRingVersion: {IoRingVersion}");
+            sb.AppendLine($"Flags: {Flags}");
+            sb.AppendLine($"SubmissionQueueSize: {SubmissionQueueSize}");
+            sb.AppendLine($"CompletionQueueSize: {CompletionQueueSize}");
+            return sb.ToString();
+        }
     }
 
     /// <summary>
@@ -288,10 +306,20 @@ public static partial class KernelBase
     [StructLayout(LayoutKind.Sequential)]
     public struct IoRingCapabilities
     {
-        public IoRingVersion _maxVersion;
-        public uint _maxSubmissionQueueSize;
-        public uint _maxCompletionQueueSize;
-        public IoRingFeatureFlags _featureFlags;
+        public IoRingVersion MaxVersion;
+        public uint MaxSubmissionQueueSize;
+        public uint MaxCompletionQueueSize;
+        public IoRingFeatureFlags FeatureFlags;
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"MaxVersion: {MaxVersion}");
+            sb.AppendLine($"MaxSubmissionQueueSize: {MaxSubmissionQueueSize}");
+            sb.AppendLine($"MaxCompletionQueueSize: {MaxCompletionQueueSize}");
+            sb.AppendLine($"FeatureFlags: {FeatureFlags}");
+            return sb.ToString();
+        }
     }
 
     /// <summary>
@@ -360,6 +388,8 @@ public static partial class KernelBase
         ///     This attempts to cancel a previously submitted operation. The UserData for the
         ///     operation to cancel is used to identify the operation.
         /// </remarks>
-        IoRingOpCancel
+        IoRingOpCancel,
+        IoRingOpWrite,
+        IoRingOpFlush
     }
 }
